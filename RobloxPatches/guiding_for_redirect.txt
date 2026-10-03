@@ -1,0 +1,17 @@
+asset redirection (local) for pre-2018(prob) clients
+
+#open the "hosts" file in C:/System32/drivers/etc/hosts (if it doesn't exist, go to the etc folder # - l8r
+
+(credits to iknow for the hosts trick + php)
+go to your hosts file do 
+127.0.0.2 assetgame.roblox.com
+open xampp or whatever you use
+have index.php that has 
+
+<?php header("Location: https://assetdelivery.roblox.com/v1/asset/?".$_SERVER["QUERY_STRING"]); ?> 
+
+then
+host!
+
+also, if you changed in the robloxplayerbeta/robloxstudiobeta/rccservice to something else (another link, localhost, etc.)
+MAKE SURE IT'S 127.0.0.2 assetgame. *yourlink* / ( assetgame.localhost for example. )

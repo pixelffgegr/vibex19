@@ -1,0 +1,50 @@
+# secrets
+.env
+*.env.local
+config.py
+!config.py.example
+
+# keys / certs
+*.pem
+*.key
+*.crt
+*.csr
+*.srl
+syntaxsource/syntaxwebsite/certs/
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# logs & caches
+logs/
+*.log
+download_cache/
+.vercel/
+
+# vendored toolchains / binaries (421 MB portable node, redis server)
+services/node/
+services/redis/
+
+# misc
+.DS_Store
+
+# leaked game binaries / vendored runtimes (multi-GB, not source)
+syntaxsource/syntaxgameserver/RCCService*/
+syntaxsource/syntaxgameserver/Player2014/
+syntaxsource/Clients/
+*.exe
+*.dll
+*.pdb
+
+# throwaway render/log artefacts from tools/ probes
+out_verify_*.png
+out_shape_*.png
+out_argsem_*.png
+out_one.png
+rcc_*.log
+rcc_strings_*.txt
+-w

@@ -1,0 +1,31 @@
+.legacy-notif-base .game-icon-container {
+ border-radius: 0;
+}
+.light-theme .legacy-notif-base {
+ border-bottom: 1px solid #e8e8e8;
+}
+.legacy-notif-base .text-content > span:first-child {
+ font-size: 14px;
+ line-height: 125%;
+}
+.legacy-notif-base .text-content > span:first-child b {
+ color: #00a2ff;
+ font-weight: 500;
+}
+.light-theme .legacy-notif-base .text-content > span:last-child {
+ color: #b8b8b8;
+}
+.game-card-info {
+ padding: 0 6px;
+ position: absolute !important;
+}
+.game-card-link [class="info-label"] {
+ font-weight: 500 !important;
+ font-size: 12px !important;
+ color: #757575 !important;
+}
+.new-notification-stream-2022 .notification-stream-body .notification-stream-data .notification-stream-scrollbar .notification-stream-list .notification-stream-item,
+.new-notification-stream-2022 .notification-stream-body .notification-stream-data .notification-stream-scrollbar .notification-stream-list .sendr-notification-background {
+ border-radius: 0;
+ margin: 0;
+}

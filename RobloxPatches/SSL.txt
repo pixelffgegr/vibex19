@@ -1,0 +1,1 @@
+patch ssl by jmping CURLOPT_SSL_VERIFYPEER

@@ -1,0 +1,1 @@
+-build start command will start studio in fullscreen with no qtitan guis as long as its 2016 or below :)

@@ -1,0 +1,21 @@
+2022M-2022L kool patching guide!!! (prob works lol) (THANKS TO Eg0!!!!!!!!!!!)
+
+
+STEP ONE:
+
+string search TlsVerificationFail
+
+click and press space on lea rdx, qword ptr ds:[7FF6D7F090D8]
+change it to lea rax, qword ptr ds:[7FF6D7F090D8]
+
+BOOM, step one finished
+
+STEP TWO:tlsVersion
+
+string search tlsVersion
+
+click and press space on lea rax, ds:[0x00007FF7CBCC1418]
+change it to lea rcx, ds:[0x00007FF7CBCC1418]
+
+STEP THREE:jmp sslfailure
+

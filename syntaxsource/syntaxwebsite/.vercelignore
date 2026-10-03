@@ -1,0 +1,9 @@
+venv/
+logs/
+certs/
+tools/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.log
+api/.vercel

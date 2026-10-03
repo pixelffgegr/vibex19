@@ -1,0 +1,18 @@
+METHOD 1: (for 2018)
+
+step 1: search up ProcessTicket exception
+step 2: Double click ServerReplicatior::processTicket exception:  %s
+step 3: find the je above the string you selected and select the je, then click the space bar and change the je to jmp
+step 4: Find the ProcessTicketException under the string you previously selected, and right click it
+step 5: go to binary, then edit, and the first two characters in the hex field turn to 00, then click ok
+step 6: if there is a second ProcessTicketException copy the step above on it, then all done! Otherwise just patch it and your done!!
+
+
+METHOD 2: (for 2019)
+
+"DFFlagCLI120342":"True"
+
+METHOD 3: (for most versions)
+
+Use debuglocalrcc fflag, and jmp either "127.0.0.1" with D188 near it, or "localhost" with D188 near it, jmp that on the client.
+Make sure to use the fflag on both the client and the rccservice.

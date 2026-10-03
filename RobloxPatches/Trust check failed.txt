@@ -1,0 +1,4 @@
+1 open x32dbg
+2 search trust check fail
+3 jmp the jne above trust check
+4 patch the file
