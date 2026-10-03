@@ -28,12 +28,20 @@ def giftcard_post():
         flash("Redeeming giftcards is temporarily disabled", "error")
         return redirect("/giftcard-redeem")
     GiftcardInput = request.form.get( key="giftcard-key", default=None, type=str)
-    CFTurnstileResponse = request.form.get( key="cf-turnstile-response", default=None, type=str)
-    if GiftcardInput is None or CFTurnstileResponse is None:
+    # Only require the captcha field when a captcha is actually configured: with
+    # no Turnstile site key the widget never renders the hidden input, so
+    # requiring it rejected every redemption with "Please fill in all the
+    # fields" before the giftcard key was even looked up.
+    if turnstile.IsEnabled():
+        CFTurnstileResponse = request.form.get( key="cf-turnstile-response", default=None, type=str)
+        if CFTurnstileResponse is None:
+            flash("Please complete the captcha", "error")
+            return redirect("/giftcard-redeem")
+        if not turnstile.VerifyToken(CFTurnstileResponse):
+            flash("Invalid captcha", "error")
+            return redirect("/giftcard-redeem")
+    if GiftcardInput is None:
         flash("Please fill in all the fields", "error")
-        return redirect("/giftcard-redeem")
-    if not turnstile.VerifyToken(CFTurnstileResponse):
-        flash("Invalid captcha", "error")
         return redirect("/giftcard-redeem")
     
     RedeemLock = redislock.acquire_lock( f"Giftcard_Redeem:{GiftcardInput}", acquire_timeout=20, lock_timeout=1)

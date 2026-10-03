@@ -55,7 +55,7 @@ def new_message(userid):
 @auth.authenticated_required
 @limiter.limit("10/minute")
 def send_message(userid):
-    if 'cf-turnstile-response' not in request.form or request.form.get('cf-turnstile-response') == '':
+    if turnstile.IsEnabled() and ('cf-turnstile-response' not in request.form or request.form.get('cf-turnstile-response') == ''):
         flash("Please complete the captcha", "error")
         return redirect(f"/messages/new/{userid}")
     if 'message' not in request.form or request.form.get('message') == '':
@@ -84,7 +84,7 @@ def send_message(userid):
         flash("Your subject is too long", "error")
         return redirect(f"/messages/new/{TargetUser.id}")
     
-    if not turnstile.VerifyToken(request.form.get('cf-turnstile-response')):
+    if turnstile.IsEnabled() and not turnstile.VerifyToken(request.form.get('cf-turnstile-response')):
         flash("Invalid captcha", "error")
         return redirect(f"/messages/new/{TargetUser.id}")
     if redis_controller.get(f"message:{TargetUser.id}:{AuthenticatedUser.id}") is not None:

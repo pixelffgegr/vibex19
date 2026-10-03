@@ -2,7 +2,13 @@
 {% block title %}Reset Password{% endblock %}
 {% block head %}
 <link href="/static/css/login.css" rel="stylesheet"/>
+{#- The Turnstile widget cannot initialise without a site key, and it never writes
+    its hidden cf-turnstile-response input in that case. Render it only when one is
+    configured, otherwise the page shows an empty grey box and the server rejects
+    the submission as if a captcha had been skipped. -#}
+{% if turnstilekey %}
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endif %}
 {% endblock %}
 {% block content %}
 <div id="main">
@@ -30,7 +36,9 @@
             {% endwith %}
             <form method="post">
                 <input type="email" id="email" name="email" class="form-control" placeholder="Email" value="" required>
+                {% if turnstilekey %}
                 <div class="cf-turnstile d-table mb-2 mt-2" style="margin: 0 auto;" data-theme="dark" data-sitekey="{{turnstilekey}}"></div>
+                {% endif %}
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <button type="submit" class="btn btn-primary mb-3">Reset Password</button>
             </form>

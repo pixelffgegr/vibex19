@@ -2,7 +2,13 @@
 {% block title %}New Message{% endblock %}
 {% block head %}
 <link href="/static/css/message.css" rel="stylesheet"/>
+{#- The Turnstile widget cannot initialise without a site key, and it never writes
+    its hidden cf-turnstile-response input in that case. Render it only when one is
+    configured, otherwise the page shows an empty grey box and the server rejects
+    the submission as if a captcha had been skipped. -#}
+{% if turnstilekey %}
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endif %}
 {% endblock %}
 {% block content %}
 <div id="main">
@@ -31,7 +37,9 @@
             <textarea class="form-control rounded" placeholder="Message ( 1024 Chars limit )" name="message" style="min-height:200px" required></textarea>
             <p class="m-0" style="font-size: 12px;">Do not send any personal or sensitive information about yourself! A staff member will never ask for your password or email.</p>
             <div class="d-flex justify-content-end align-items-top mt-2">
+                {% if turnstilekey %}
                 <div class="cf-turnstile" data-theme="dark" data-sitekey="{{turnstilekey}}"></div>
+                {% endif %}
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="ms-3">
                     <button type="submit" class="btn btn-primary">Send</button>

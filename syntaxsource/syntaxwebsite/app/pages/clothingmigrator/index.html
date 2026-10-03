@@ -2,7 +2,13 @@
 {% block title %}Clothing Migrator{% endblock %}
 {% block head %}
 <link href="/static/css/settings.css" rel="stylesheet"/> <!-- Its just easier to resuse this-->
+{#- The Turnstile widget cannot initialise without a site key, and it never writes
+    its hidden cf-turnstile-response input in that case. Render it only when one is
+    configured, otherwise the page shows an empty grey box and the server rejects
+    the submission as if a captcha had been skipped. -#}
+{% if turnstilekey %}
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endif %}
 <style>
     .text-secondary {
         color: rgb(199, 199, 199) !important;
@@ -29,7 +35,9 @@
         <form method="post">
             <input type="text" name="asseturl" class="form-control w-100" placeholder="Asset URL ( eg. https://www.roblox.com/catalog/123456789/shirt )" required>
             <div class="d-flex justify-content-end align-items-top mt-2">
+                {% if turnstilekey %}
                 <div class="cf-turnstile" data-theme="dark" data-sitekey="{{turnstilekey}}"></div>
+                {% endif %}
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="ms-3">
                     <button type="submit" class="btn btn-primary btn-sm">Migrate Clothing</button>

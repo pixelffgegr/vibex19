@@ -22,13 +22,14 @@ def audiomigrator_post():
         flash("Audio migration is temporarily disabled", "error")
         return redirect("/audiomigrator")
     
-    CFTurnstileResponse = request.form.get( key="cf-turnstile-response", default=None, type=str)
-    if CFTurnstileResponse is None:
-        flash("Invalid captcha", "error")
-        return redirect("/audiomigrator")
-    if not turnstile.VerifyToken(CFTurnstileResponse):
-        flash("Invalid captcha", "error")
-        return redirect("/audiomigrator")
+    if turnstile.IsEnabled():
+        CFTurnstileResponse = request.form.get( key="cf-turnstile-response", default=None, type=str)
+        if CFTurnstileResponse is None:
+            flash("Invalid captcha", "error")
+            return redirect("/audiomigrator")
+        if not turnstile.VerifyToken(CFTurnstileResponse):
+            flash("Invalid captcha", "error")
+            return redirect("/audiomigrator")
 
     PlaceId = request.form.get( key = "placeid", default = None, type = int )
     if PlaceId is None:

@@ -978,6 +978,80 @@ def VerifyTempAuthToken( AuthToken : str, AssetId : int, RequesterIP : str = Non
     redis_controller.delete(f"AssetTempAuthToken:{AuthToken}:{str(AssetId)}")
     return True
 
+def EnsureAssetContent( asset : Asset ) -> AssetVersion | None:
+    """
+        Give an existing asset row its file back.
+
+        An asset row can exist with no asset_version at all - that is the shape
+        the seeded catalog rows had (assets 1-3). AssetHandler then answered
+        {"error":"Invalid request"} forever and the catalog showed the broken
+        content-deleted box, because migrateAsset() returns early whenever an
+        asset id already exists and never fills the file in.
+
+        Re-downloads the file from Roblox, stores it, creates version 1 and
+        asks for an icon. Returns None when it cannot be repaired.
+
+        :param asset: The asset that has no content
+        :returns: The asset's latest AssetVersion, or None
+    """
+    if asset is None or asset.roblox_asset_id is None:
+        return None
+
+    Existing : AssetVersion = AssetVersion.query.filter_by(asset_id=asset.id).order_by(AssetVersion.version.desc()).first()
+    if Existing is not None:
+        return Existing
+
+    # Don't hammer Roblox for an asset they will never serve us (deleted,
+    # private, moderated). The block is a day so a later attempt can succeed.
+    if redis_controller.get(f"asset_content_backfill_blocked:{str(asset.id)}") is not None:
+        return None
+
+    LockName = f"asset_content_backfill:{str(asset.id)}"
+    Lock = redislock.acquire_lock(lock_name=LockName, acquire_timeout=20, lock_timeout=30)
+    if Lock is None:
+        # Another request is already repairing this asset.
+        return AssetVersion.query.filter_by(asset_id=asset.id).order_by(AssetVersion.version.desc()).first()
+
+    try:
+        roblox_id = asset.roblox_asset_id
+        try:
+            Response = requests.get(
+                f"https://assetdelivery.roblox.com/v1/asset/?id={str(roblox_id)}",
+                timeout=15
+            )
+        except Exception as e:
+            logging.warning(f"EnsureAssetContent: could not reach Roblox for asset {str(asset.id)} / {e}")
+            return None
+
+        if Response.status_code != 200:
+            redis_controller.setex(f"asset_content_backfill_blocked:{str(asset.id)}", 60 * 60 * 24, "true")
+            logging.warning(
+                f"EnsureAssetContent: Roblox refused asset {str(roblox_id)} for asset {str(asset.id)} "
+                f"(status {str(Response.status_code)}) - not retrying for 24h"
+            )
+            return None
+
+        Content = Response.content
+        try:
+            # Point any roblox.com references inside the file at this site.
+            Content = Content.replace("roblox.com".encode("utf-8"), config.BaseDomain.encode("utf-8"))
+        except Exception:
+            # Not an rbxmx/rbxm file, so nothing to rewrite.
+            pass
+
+        ContentHash = hashlib.sha512(Content).hexdigest()
+        s3helper.UploadBytesToS3(Content, ContentHash)
+        AssetVersionCreated = assetversion.CreateNewAssetVersion(asset, ContentHash)
+        if AssetVersionCreated is None:
+            return None
+        db.session.commit()
+        logging.info(f"EnsureAssetContent: repaired asset {str(asset.id)} ({asset.name!r}) from Roblox asset {str(roblox_id)}")
+        TakeThumbnail(asset.id, bypassCooldown=True)
+        db.session.commit()
+        return AssetVersion.query.filter_by(asset_id=asset.id).order_by(AssetVersion.version.desc()).first()
+    finally:
+        redislock.release_lock(LockName, Lock)
+
 @AssetRoute.route("/v1/asset/", methods=["GET"])
 @AssetRoute.route("/v1/asset", methods=["GET"])
 @AssetRoute.route('/Asset', methods=['GET'])
@@ -1080,6 +1154,10 @@ def AssetHandler():
             return jsonify({'error':'Invalid request'}),400
 
     assetVersion : AssetVersion = AssetVersion.query.filter_by(asset_id=asset.id).order_by(AssetVersion.version.desc()).first()
+    if assetVersion is None:
+        # The row exists but the file behind it does not (seeded catalog rows
+        # looked like this). Try to repair it rather than failing forever.
+        assetVersion = EnsureAssetContent(asset)
     if assetVersion is None:
         return jsonify({'error':'Invalid request'}),400
     

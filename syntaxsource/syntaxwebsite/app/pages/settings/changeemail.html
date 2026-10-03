@@ -2,7 +2,13 @@
 {% block title %}Change Email{% endblock %}
 {% block head %}
 <link href="/static/css/settings.css" rel="stylesheet"/> <!-- Its just easier to resuse this-->
+{#- The Turnstile widget cannot initialise without a site key, and it never writes
+    its hidden cf-turnstile-response input in that case. Render it only when one is
+    configured, otherwise the page shows an empty grey box and the server rejects
+    the submission as if a captcha had been skipped. -#}
+{% if turnstilekey %}
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endif %}
 <style>
     .text-secondary {
         color: rgb(200,200,200) !important;
@@ -42,11 +48,15 @@
             </div>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="d-flex w-100 align-items-center">
+                {% if turnstilekey %}
                 <div class="cf-turnstile d-table mt-2" style="margin: 0 0;" data-theme="dark" data-sitekey="{{turnstilekey}}"></div>
+                {% endif %}
                 <div class="ms-2 flex-grow-1 text-center mt-2">
+                    {% if turnstilekey %}
                     <p class="text-secondary" style="font-size: 14px;">
                         Please complete the captcha to change your email.
                     </p>
+                    {% endif %}
                     <button type="submit" class="btn btn-primary w-100 text-center btn-sm">Update Email</button>
                 </div>
             </div> 

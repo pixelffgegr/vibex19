@@ -428,22 +428,26 @@ def settings_update_email_post():
     
     NewEmail = request.form.get( key = "new-email", default = "", type = str ).strip().lower()
     Password = request.form.get( key = "password", default = "", type = str )
-    CloudflareTurnstileKey = request.form.get( key = "cf-turnstile-response", default = None, type=str )
 
-    if CloudflareTurnstileKey is None or CloudflareTurnstileKey == '':
-        flash("Please complete the captcha", "error")
-        return redirect("/settings/update-password")
-    if not turnstile.VerifyToken( CloudflareTurnstileKey ):
-        flash("Invalid captcha answer", "error")
-        return redirect("/settings/update-password")
+    # Only enforce the captcha when one is configured. With no Turnstile site
+    # key the widget never renders its hidden input, so this rejected every
+    # email change with "Please complete the captcha".
+    if turnstile.IsEnabled():
+        CloudflareTurnstileKey = request.form.get( key = "cf-turnstile-response", default = None, type=str )
+        if CloudflareTurnstileKey is None or CloudflareTurnstileKey == '':
+            flash("Please complete the captcha", "error")
+            return redirect("/settings/update-email")
+        if not turnstile.VerifyToken( CloudflareTurnstileKey ):
+            flash("Invalid captcha answer", "error")
+            return redirect("/settings/update-email")
 
     if not auth.VerifyPassword(AuthenticatedUser, Password):
         flash("Incorrect password", "error")
-        return redirect("/settings/update-password")
+        return redirect("/settings/update-email")
     
     if not re.match( EmailRegex, NewEmail ):
         flash("Invalid Email, Not RFC 5322 compliant", "error")
-        return redirect("/settings/update-password")
+        return redirect("/settings/update-email")
     
     UserEmailObj : UserEmail = UserEmail.query.filter_by(user_id = AuthenticatedUser.id ).first()
     if UserEmailObj:
