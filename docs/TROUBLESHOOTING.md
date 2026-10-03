@@ -115,3 +115,40 @@ left RCC rendering the default avatar.
 Check the URL the *binary* was given. `config.BaseURL` is
 `http://www.syntax.eco`, which only resolves through the hosts file. Anything
 built from it is correct locally and wrong anywhere else.
+## Images 500 on the serverless deployment but work locally
+
+`getObject` from Supabase used to be followed by an unconditional write into
+`./download_cache/`, so every read that was not already cached died:
+
+```
+File "app/routes/image.py", line 107, in HandleImageResize
+  ImageContent = BytesIO( s3helper.GetFileFromS3(ImageContentHash) )
+File "app/util/s3helper.py", line 166, in GetFileFromS3
+  with open(f"{Config.AWS_S3_DOWNLOAD_CACHE_DIR}/{fileName}", "wb") as f:
+OSError: [Errno 30] Read-only file system: './download_cache/17216a1938c4...'
+```
+
+Symptom: `/asset-thumbnail/image`, `/avatar-thumbnail/image` and
+`/headshot-thumbnail/image` return 200 only for sizes that already exist in
+storage; every **new** size returns 500. Locally it always works, because the
+directory is writable. Vercel lambdas have a read-only filesystem.
+
+Fixed in `s3helper.GetFileFromS3`: the disk mirror is now only written when
+`USE_LOCAL_STORAGE=true`, and a write failure there is logged and ignored
+because the cache is an optimisation, not a requirement. Regression check:
+`tools/verify_readonly_cache.py` points the cache directory at a path that
+cannot be created and asserts bytes still come back.
+
+Local mode also had the mirror-image bug: `GetFileFromS3` required a redis
+`DownloadCache:` key before reading the file, and nothing in the local-storage
+path ever set it, so `USE_LOCAL_STORAGE=true` reads always returned `None`.
+That branch now reads the file directly.
+
+## Read Vercel logs
+
+```
+npx vercel logs vibex19.vercel.app --since 5m
+```
+
+This prints the real Flask traceback for a 500, which the HTML error page does
+not include.

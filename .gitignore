@@ -3,6 +3,12 @@
 *.env.local
 config.py
 !config.py.example
+# Both config.py files are now fully env-driven with empty defaults (the
+# website reads STORAGE_* / SUPABASE_*, the game server reads
+# GAMESERVER_AUTH_TOKEN), so a clone is not broken by their absence and the
+# asset-delivery domain fix cannot be lost by a gitignore rule.
+!syntaxsource/syntaxwebsite/config.py
+!syntaxsource/syntaxgameserver/config.py
 
 # keys / certs
 *.pem
@@ -48,3 +54,5 @@ out_one.png
 rcc_*.log
 rcc_strings_*.txt
 -w
+out_render/
+out_*.png

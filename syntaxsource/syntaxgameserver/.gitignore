@@ -2,4 +2,5 @@ __pycache__/
 logs/
 linuxfile/
 *.zip
-config.py
+gs_stdout.log
+manager.log

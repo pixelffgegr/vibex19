@@ -144,11 +144,18 @@ def GetFileFromS3( fileName : str, bucketOverwrite : str | None = Config.AWS_S3_
         :returns: bytes (The bytes of the file)
     """
 
-    if not skipDownloadCache or Config.USE_LOCAL_STORAGE:
-        if redis_controller.exists(f"DownloadCache:{bucketOverwrite}:{fileName}") and os.path.exists(f"{Config.AWS_S3_DOWNLOAD_CACHE_DIR}/{fileName}"):
-            return open(f"{Config.AWS_S3_DOWNLOAD_CACHE_DIR}/{fileName}", "rb").read()
-        if Config.USE_LOCAL_STORAGE:
-            return None
+    CachedPath = f"{Config.AWS_S3_DOWNLOAD_CACHE_DIR}/{fileName}"
+    if Config.USE_LOCAL_STORAGE:
+        # Local mode has no bucket behind it - the cache dir is the store, and
+        # nothing else ever sets the redis DownloadCache key, so requiring that
+        # key here meant every local read returned None.
+        if not skipDownloadCache and os.path.exists(CachedPath):
+            return open(CachedPath, "rb").read()
+        return None
+
+    if not skipDownloadCache:
+        if redis_controller.exists(f"DownloadCache:{bucketOverwrite}:{fileName}") and os.path.exists(CachedPath):
+            return open(CachedPath, "rb").read()
 
     s3Client = getS3Client()
 
@@ -161,11 +168,21 @@ def GetFileFromS3( fileName : str, bucketOverwrite : str | None = Config.AWS_S3_
         logging.error(f"S3Helper.GetFileFromS3 / Exception raised when fetching file from S3 Bucket [ {bucketOverwrite} ] with name [ {fileName} ] / {e}]")
         return None
 
-    if not os.path.exists(Config.AWS_S3_DOWNLOAD_CACHE_DIR):
-        os.mkdir(Config.AWS_S3_DOWNLOAD_CACHE_DIR)
-    with open(f"{Config.AWS_S3_DOWNLOAD_CACHE_DIR}/{fileName}", "wb") as f:
-        f.write(FileBytes)
-    redis_controller.set(f"DownloadCache:{bucketOverwrite}:{fileName}", "1", Config.AWS_S3_CACHE_LIFETIME)
+    # Only mirror the download to disk in local-development mode. A serverless
+    # deployment has a read-only filesystem, so writing here raised
+    # "OSError: [Errno 30] Read-only file system" and turned every
+    # cache-miss image read (a freshly rendered thumbnail, a new crop size)
+    # into an HTTP 500.
+    if Config.USE_LOCAL_STORAGE:
+        try:
+            os.makedirs(Config.AWS_S3_DOWNLOAD_CACHE_DIR, exist_ok=True)
+            with open(CachedPath, "wb") as f:
+                f.write(FileBytes)
+            redis_controller.set(f"DownloadCache:{bucketOverwrite}:{fileName}", "1", Config.AWS_S3_CACHE_LIFETIME)
+        except OSError as e:
+            # The cache is an optimisation, never a requirement: a read-only
+            # filesystem just means we re-download every time.
+            logging.warning(f"S3Helper.GetFileFromS3 / download cache unavailable, skipping: {e}")
 
     return FileBytes
 
